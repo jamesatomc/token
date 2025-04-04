@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>KARI Token</title>
+    <script src="https://cdn.ethers.io/lib/ethers-5.2.umd.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .token-card {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+        }
+        .token-logo {
+            width: 96px;
+            height: 96px;
+            border-radius: 50%;
+            margin-right: 20px;
+        }
+        .token-info {
+            flex-grow: 1;
+        }
+    </style>
+</head>
+<body>
+    <h1>KARI Token Information</h1>
+    
+    <div class="token-card">
+        <img id="tokenLogo" class="token-logo" src="https://avatars.githubusercontent.com/u/127471673?s=96&v=4" alt="KARI Token Logo">
+        <div class="token-info">
+            <h2>KARI</h2>
+            <p>Your ERC20 token with customizable transfer fees</p>
+            <p id="tokenAddress">Contract Address: Loading...</p>
+        </div>
+    </div>
+
+    <script>
+        // You would replace this with your actual contract address and ABI when deployed
+        const contractAddress = "YOUR_CONTRACT_ADDRESS";
+        const contractABI = [
+            "function name() view returns (string)",
+            "function symbol() view returns (string)",
+            "function logoURL() view returns (string)"
+        ];
+
+        // Connect to the contract when wallet is available
+        async function loadTokenInfo() {
+            try {
+                if (window.ethereum) {
+                    const provider = new ethers.providers.Web3Provider(window.ethereum);
+                    const contract = new ethers.Contract(contractAddress, contractABI, provider);
+                    
+                    // Get logo URL from the contract
+                    const logo = await contract.logoURL();
+                    document.getElementById("tokenLogo").src = logo;
+                    
+                    // Display contract address
+                    document.getElementById("tokenAddress").innerText = "Contract Address: " + contractAddress;
+                } else {
+                    console.log("No wallet detected. Displaying default logo.");
+                }
+            } catch (error) {
+                console.error("Error loading token info:", error);
+            }
+        }
+
+        // For testing purposes, we're showing the default logo
+        // When deployed, uncomment the next line to load from blockchain
+        // loadTokenInfo();
+    </script>
+</body>
+</html>

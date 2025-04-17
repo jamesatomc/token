@@ -7,6 +7,9 @@ contract TokenFactory {
     // Event to notify when a new token is created
     event TokenCreated(address tokenAddress, string name, string symbol, uint256 initialSupply, address creator, address recipient);
     
+    // Add new error events to help with debugging
+    event TokenCreationError(string errorMessage, address tokenAddress);
+
     // Array to store all created tokens
     address[] public createdTokens;
     
@@ -38,23 +41,70 @@ contract TokenFactory {
         uint256 initialSupply,
         string memory logoURL,
         address recipient
-    ) external returns (address) {
+    ) public returns (address) {
+        // Input validation
+        require(bytes(name).length > 0, "Token name cannot be empty");
+        require(bytes(symbol).length > 0, "Token symbol cannot be empty");
+        require(initialSupply > 0, "Initial supply must be greater than zero");
+        
         // Create a new Token contract
-        Token newToken = new Token(name, symbol, initialSupply, logoURL);
+        Token newToken;
+        try new Token(name, symbol, initialSupply, logoURL) returns (Token token) {
+            newToken = token;
+        } catch Error(string memory reason) {
+            emit TokenCreationError(reason, address(0));
+            revert(string(abi.encodePacked("Token creation failed: ", reason)));
+        } catch (bytes memory) {
+            emit TokenCreationError("Token creation failed with unknown error", address(0));
+            revert("Token creation failed with unknown error");
+        }
         
-        // Transfer all initial tokens to the recipient if specified, otherwise keep in factory
-        uint256 totalSupply = newToken.balanceOf(address(this));
-        require(totalSupply > 0, "No tokens were minted");
+        address tokenAddress = address(newToken);
         
-        if (recipient != address(0)) {
-            newToken.transfer(recipient, totalSupply);
+        // Check total supply (not just factory balance)
+        uint256 totalSupply;
+        try newToken.totalSupply() returns (uint256 supply) {
+            totalSupply = supply;
+            require(totalSupply > 0, "No tokens were minted");
+        } catch Error(string memory reason) {
+            emit TokenCreationError(reason, tokenAddress);
+            revert(string(abi.encodePacked("Failed to get total supply: ", reason)));
+        } catch (bytes memory) {
+            emit TokenCreationError("Failed to get total supply with unknown error", tokenAddress);
+            revert("Failed to get total supply with unknown error");
+        }
+        
+        // Get the actual balance of the factory
+        uint256 factoryBalance;
+        try newToken.balanceOf(address(this)) returns (uint256 balance) {
+            factoryBalance = balance;
+        } catch Error(string memory reason) {
+            emit TokenCreationError(reason, tokenAddress);
+            revert(string(abi.encodePacked("Failed to get factory balance: ", reason)));
+        } catch (bytes memory) {
+            emit TokenCreationError("Failed to get factory balance with unknown error", tokenAddress);
+            revert("Failed to get factory balance with unknown error");
+        }
+        
+        // Transfer tokens to the recipient if specified, otherwise keep in factory
+        if (recipient != address(0) && factoryBalance > 0) {
+            bool transferSuccess = false;
+            try newToken.transfer(recipient, factoryBalance) returns (bool success) {
+                transferSuccess = success;
+            } catch Error(string memory reason) {
+                emit TokenCreationError(reason, tokenAddress);
+                revert(string(abi.encodePacked("Token transfer to recipient failed: ", reason)));
+            } catch (bytes memory) {
+                emit TokenCreationError("Token transfer failed with unknown error", tokenAddress);
+                revert("Token transfer failed with unknown error");
+            }
+            require(transferSuccess, "Token transfer to recipient returned false");
         }
         
         // Transfer ownership to the caller
         newToken.transferOwnership(msg.sender);
         
         // Record the new token
-        address tokenAddress = address(newToken);
         createdTokens.push(tokenAddress);
         creatorTokens[msg.sender].push(tokenAddress);
         
@@ -85,8 +135,8 @@ contract TokenFactory {
         string memory symbol,
         uint256 initialSupply,
         string memory logoURL
-    ) external returns (address) {
-        return this.createToken(name, symbol, initialSupply, logoURL, msg.sender);
+    ) public returns (address) {
+        return createToken(name, symbol, initialSupply, logoURL, msg.sender);
     }
     
     /**
@@ -100,9 +150,9 @@ contract TokenFactory {
         uint256 feePercentage,
         address feeCollector,
         address recipient
-    ) external returns (address) {
+    ) public returns (address) {
         // Create the basic token first
-        address tokenAddress = this.createToken(name, symbol, initialSupply, logoURL, recipient);
+        address tokenAddress = createToken(name, symbol, initialSupply, logoURL, recipient);
         Token token = Token(tokenAddress);
         
         // Configure the fee settings
@@ -126,8 +176,8 @@ contract TokenFactory {
         string memory logoURL,
         uint256 feePercentage,
         address feeCollector
-    ) external returns (address) {
-        return this.createTokenWithFee(name, symbol, initialSupply, logoURL, feePercentage, feeCollector, msg.sender);
+    ) public returns (address) {
+        return createTokenWithFee(name, symbol, initialSupply, logoURL, feePercentage, feeCollector, msg.sender);
     }
     
     /**

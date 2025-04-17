@@ -3,6 +3,13 @@
 import { useState, useEffect } from 'react';
 import { switchToTeaNetwork, TEA_NETWORK } from '../../utils/networkConfig';
 
+// Define type for the Ethereum window object
+declare global {
+  interface Window {
+    ethereum?: any;
+  }
+}
+
 const WalletConnect = () => {
   const [address, setAddress] = useState("");
   const [isConnected, setIsConnected] = useState(false);

@@ -20,12 +20,13 @@ contract Token is ERC20, Ownable, ERC20Burnable {
         uint256 initialSupply,
         string memory initialLogoURL
     ) ERC20(name, symbol) {
-        // Create tokens with 18 decimals based on specified supply
-        _mint(msg.sender, initialSupply * 10**decimals());
+        // Create tokens with 18 decimals based on specified supply and mint to contract creator (factory)
+        uint256 mintAmount = initialSupply * 10**decimals();
+        _mint(msg.sender, mintAmount);
         logoURL = initialLogoURL;
         feeCollector = msg.sender;
         isExemptFromFee[msg.sender] = true; // Owner is exempt from fees
-        _transferOwnership(msg.sender); // Set the owner properly
+        // Note: ownership will be transferred to actual user by factory later
     }
     
     // Add mint function for the owner to create more tokens
@@ -99,5 +100,10 @@ contract Token is ERC20, Ownable, ERC20Burnable {
             super._transfer(sender, feeCollector, feeAmount);
             super._transfer(sender, recipient, transferAmount);
         }
+    }
+
+    // Add a function to check if an address has tokens
+    function hasTokens(address account) external view returns (bool) {
+        return balanceOf(account) > 0;
     }
 }

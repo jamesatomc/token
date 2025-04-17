@@ -27,7 +27,7 @@ function TokenForm({ walletConnected, address }) {
     const [customRecipient, setCustomRecipient] = useState(false);
     const [recipientAddress, setRecipientAddress] = useState("");
     
-    const contractAddress = "0xd6DCfc021E526C483982161f36CE6692fdef9E04";
+    const contractAddress = "0x1e8c007A328701fDc34761990CAae81359698CB7";
 
     async function createToken(e) {
         e.preventDefault();

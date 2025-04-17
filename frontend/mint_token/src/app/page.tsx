@@ -1,20 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import dynamic from "next/dynamic";
+import { useState, useEffect } from 'react';
+import dynamic from 'next/dynamic';
 
 // Dynamically import components to avoid hydration issues
-const WalletConnect = dynamic(
-  () => import("./components/WalletConnect"),
-  { ssr: false }
-);
+const WalletConnect = dynamic(() => import('./components/WalletConnect'), { ssr: false });
+const TokenForm = dynamic(() => import('./components/TokenForm'), { ssr: false });
 
-const TokenForm = dynamic(
-  () => import("./components/TokenForm"),
-  { ssr: false }
-);
-
-export default function Home() {
+function Home() {
   const [walletConnected, setWalletConnected] = useState(false);
   const [address, setAddress] = useState("");
 
@@ -36,7 +29,7 @@ export default function Home() {
       checkConnection();
       
       // Listen for account changes
-      window.ethereum.on('accountsChanged', (accounts: string[]) => {
+      window.ethereum.on('accountsChanged', (accounts) => {
         if (accounts.length > 0) {
           setWalletConnected(true);
           setAddress(accounts[0]);
@@ -56,17 +49,13 @@ export default function Home() {
           <p className="text-gray-500 dark:text-gray-400 text-center mb-6">
             Create and deploy your custom ERC20 tokens on TEA Network Testnet
           </p>
-          
           <WalletConnect />
         </header>
         
         <main className="mb-12">
           <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
             <div className="md:col-span-8">
-              <TokenForm 
-                walletConnected={walletConnected} 
-                address={address}
-              />
+              <TokenForm walletConnected={walletConnected} address={address} />
             </div>
             
             <div className="md:col-span-4">
@@ -75,23 +64,21 @@ export default function Home() {
                 <p className="mb-4 text-gray-600 dark:text-gray-300">
                   This platform allows you to create custom ERC20 tokens with various features:
                 </p>
-                
                 <ul className="list-disc pl-5 mb-4 text-gray-600 dark:text-gray-300 space-y-2">
                   <li>Custom token name and symbol</li>
                   <li>Configurable initial supply</li>
                   <li>Optional transfer fees</li>
                   <li>Custom logo URL for your token</li>
                 </ul>
-                
                 <p className="text-gray-600 dark:text-gray-300">
-                  Your tokens are deployed to the TEA Network Testnet using the TokenFactory smart contract at: 
-                  <a 
-                    href="https://sepolia.tea.xyz/address/0xEa55E9D1A46E2d25c618163C862A6aa910EDb637" 
+                  Your tokens are deployed to the TEA Network Testnet using the TokenFactory smart contract at:
+                  <a
+                    href="https://sepolia.tea.xyz/address/0xd6DCfc021E526C483982161f36CE6692fdef9E04"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="block mt-1 text-blue-600 hover:underline break-all"
                   >
-                    0xEa55E9D1A46E2d25c618163C862A6aa910EDb637
+                    0xd6DCfc021E526C483982161f36CE6692fdef9E04
                   </a>
                 </p>
               </div>
@@ -106,3 +93,5 @@ export default function Home() {
     </div>
   );
 }
+
+export default Home;

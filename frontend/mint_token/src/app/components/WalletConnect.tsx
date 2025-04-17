@@ -1,169 +1,131 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { ethers } from "ethers";
+import { useState, useEffect } from 'react';
+import { switchToTeaNetwork, TEA_NETWORK } from '../../utils/networkConfig';
 
-export default function WalletConnect() {
-  const [isConnected, setIsConnected] = useState(false);
+const WalletConnect = () => {
   const [address, setAddress] = useState("");
-  const [chainId, setChainId] = useState("");
-  const [error, setError] = useState("");
+  const [isConnected, setIsConnected] = useState(false);
+  const [chainId, setChainId] = useState<number | null>(null);
+  const [isCorrectNetwork, setIsCorrectNetwork] = useState(false);
 
-  const TEA_CHAIN_ID = "10218";
-  const TEA_CHAIN_ID_HEX = "0x27DA";
-
-  // Check if wallet is already connected
   useEffect(() => {
+    const checkConnection = async () => {
+      if (window.ethereum) {
+        try {
+          const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+          if (accounts.length > 0) {
+            setAddress(accounts[0]);
+            setIsConnected(true);
+            
+            const chainIdHex = await window.ethereum.request({ method: 'eth_chainId' });
+            const networkChainId = parseInt(chainIdHex, 16);
+            setChainId(networkChainId);
+            setIsCorrectNetwork(networkChainId === parseInt(TEA_NETWORK.chainId, 16));
+          }
+        } catch (error) {
+          console.error("Error checking wallet connection:", error);
+        }
+      }
+    };
+    
     checkConnection();
     
-    // Add event listeners
     if (window.ethereum) {
-      window.ethereum.on("accountsChanged", checkConnection);
-      window.ethereum.on("chainChanged", () => window.location.reload());
+      window.ethereum.on('accountsChanged', (accounts: string[]) => {
+        if (accounts.length > 0) {
+          setAddress(accounts[0]);
+          setIsConnected(true);
+        } else {
+          setAddress("");
+          setIsConnected(false);
+        }
+      });
+      
+      window.ethereum.on('chainChanged', (chainIdHex: string) => {
+        const networkChainId = parseInt(chainIdHex, 16);
+        setChainId(networkChainId);
+        setIsCorrectNetwork(networkChainId === parseInt(TEA_NETWORK.chainId, 16));
+      });
     }
     
     return () => {
       if (window.ethereum) {
-        window.ethereum.removeListener("accountsChanged", checkConnection);
+        window.ethereum.removeListener('accountsChanged', () => {});
+        window.ethereum.removeListener('chainChanged', () => {});
       }
     };
   }, []);
 
-  async function checkConnection() {
-    try {
-      if (!window.ethereum) {
-        setError("No wallet detected");
-        return;
-      }
-      
-      const provider = new ethers.BrowserProvider(window.ethereum);
-      const accounts = await provider.listAccounts();
-      
-      if (accounts.length > 0) {
-        setIsConnected(true);
-        setAddress(accounts[0].address);
-        
-        const network = await provider.getNetwork();
-        setChainId(network.chainId.toString());
-      } else {
-        setIsConnected(false);
-        setAddress("");
-      }
-    } catch (err) {
-      console.error(err);
-      setIsConnected(false);
+  const connectWallet = async () => {
+    if (!window.ethereum) {
+      alert("Please install MetaMask or another Ethereum wallet");
+      return;
     }
-  }
-
-  async function connectWallet() {
+    
     try {
-      setError("");
-      if (!window.ethereum) {
-        setError("Please install MetaMask or another Web3 wallet");
-        return;
-      }
+      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+      setAddress(accounts[0]);
+      setIsConnected(true);
       
-      const provider = new ethers.BrowserProvider(window.ethereum);
-      await provider.send("eth_requestAccounts", []);
-      const accounts = await provider.listAccounts();
-      
-      if (accounts.length > 0) {
-        setIsConnected(true);
-        setAddress(accounts[0].address);
-        
-        const network = await provider.getNetwork();
-        setChainId(network.chainId.toString());
-        
-        // Check if we're on TEA Network testnet
-        if (network.chainId.toString() !== TEA_CHAIN_ID) {
-          switchToTEANetwork();
-        }
-      }
-    } catch (err: any) {
-      console.error(err);
-      setError(err.message || "Failed to connect wallet");
+      // Check if on correct network
+      const chainIdHex = await window.ethereum.request({ method: 'eth_chainId' });
+      const networkChainId = parseInt(chainIdHex, 16);
+      setChainId(networkChainId);
+      setIsCorrectNetwork(networkChainId === parseInt(TEA_NETWORK.chainId, 16));
+    } catch (error) {
+      console.error("Error connecting wallet:", error);
     }
-  }
+  };
 
-  async function switchToTEANetwork() {
-    try {
-      if (!window.ethereum) return;
-      
-      await window.ethereum.request({
-        method: 'wallet_switchEthereumChain',
-        params: [{ chainId: TEA_CHAIN_ID_HEX }], // TEA Network Testnet chainId in hex
-      });
-    } catch (err: any) {
-      // If user doesn't have TEA Network in their MetaMask, let's add it
-      if (err.code === 4902) {
-        try {
-          await window.ethereum.request({
-            method: 'wallet_addEthereumChain',
-            params: [
-              {
-                chainId: TEA_CHAIN_ID_HEX,
-                chainName: 'TEA Network Testnet',
-                nativeCurrency: {
-                  name: 'TEA',
-                  symbol: 'TEA',
-                  decimals: 18,
-                },
-                rpcUrls: ['https://tea-sepolia.g.alchemy.com/public'],
-                blockExplorerUrls: ['https://sepolia.tea.xyz/'],
-              },
-            ],
-          });
-        } catch (addError) {
-          console.error(addError);
-        }
-      } else {
-        console.error("Error switching to TEA Network Testnet:", err);
-      }
+  const handleSwitchNetwork = async () => {
+    const success = await switchToTeaNetwork();
+    if (success) {
+      const chainIdHex = await window.ethereum.request({ method: 'eth_chainId' });
+      const networkChainId = parseInt(chainIdHex, 16);
+      setChainId(networkChainId);
+      setIsCorrectNetwork(networkChainId === parseInt(TEA_NETWORK.chainId, 16));
     }
-  }
+  };
 
-  function formatAddress(address: string) {
-    if (!address) return "";
-    return `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
-  }
+  const formatAddress = (addr: string) => {
+    return addr ? `${addr.substring(0, 6)}...${addr.substring(addr.length - 4)}` : '';
+  };
 
   return (
-    <div className="flex flex-col items-center mb-6">
-      {error && (
-        <div className="mb-4 p-3 bg-red-50 text-red-700 rounded-md">
-          {error}
-        </div>
-      )}
-      
+    <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-6">
       {!isConnected ? (
-        <button 
+        <button
           onClick={connectWallet}
-          className="py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-md"
+          className="bg-blue-600 hover:bg-blue-700 text-white py-2 px-6 rounded shadow-lg transition duration-200"
         >
           Connect Wallet
         </button>
       ) : (
-        <div className="flex flex-col items-center">
-          <div className="px-4 py-2 bg-gray-100 dark:bg-gray-700 rounded-md mb-2">
-            <span className="font-mono">{formatAddress(address)}</span>
+        <div className="flex flex-col sm:flex-row items-center gap-4">
+          <div className="bg-green-100 text-green-800 py-2 px-4 rounded-full font-medium flex items-center">
+            <span className="inline-block h-2 w-2 rounded-full bg-green-500 mr-2"></span>
+            {formatAddress(address)}
           </div>
-          <p className="text-sm">
-            {chainId === TEA_CHAIN_ID ? (
-              <span className="text-green-600">Connected to TEA Network Testnet</span>
-            ) : (
-              <span className="text-yellow-600">
-                Wrong Network - Please switch to TEA Network Testnet
-                <button
-                  onClick={switchToTEANetwork}
-                  className="ml-2 underline text-blue-600"
-                >
-                  Switch
-                </button>
-              </span>
-            )}
-          </p>
+          
+          {!isCorrectNetwork && (
+            <button
+              onClick={handleSwitchNetwork}
+              className="bg-yellow-600 hover:bg-yellow-700 text-white py-2 px-4 rounded shadow-lg transition duration-200"
+            >
+              Switch to TEA Network
+            </button>
+          )}
+        </div>
+      )}
+      
+      {isConnected && isCorrectNetwork && (
+        <div className="bg-blue-100 text-blue-800 py-1 px-3 rounded-full text-sm">
+          TEA Network Connected
         </div>
       )}
     </div>
   );
-}
+};
+
+export default WalletConnect;

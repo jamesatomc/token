@@ -40,7 +40,12 @@ contract TokenFactory {
         // Create a new Token contract
         Token newToken = new Token(name, symbol, initialSupply, logoURL);
         
-        // Transfer ownership to the creator
+        // Transfer all initial tokens to the caller
+        uint256 totalSupply = newToken.balanceOf(address(this));
+        require(totalSupply > 0, "No tokens were minted");
+        newToken.transfer(msg.sender, totalSupply);
+        
+        // Transfer ownership to the caller
         newToken.transferOwnership(msg.sender);
         
         // Record the new token

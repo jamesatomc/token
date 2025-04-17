@@ -64,3 +64,12 @@ $ forge --help
 $ anvil --help
 $ cast --help
 ```
+
+```shell
+forge create src/TokenFactory.sol:TokenFactory  --rpc-url https://tea-sepolia.g.alchemy.com/public --ledger --broadcast  --gas-limit 368036
+[⠊] Compiling...
+No files changed, compilation skipped
+Deployer: 0xC88C539aa6f67daeDaeA7aff75FE1F8848d6CeC2
+Deployed to: 0xEa55E9D1A46E2d25c618163C862A6aa910EDb637
+Transaction hash: 0xe6d5afef4d9114cb8eb9aa07e033f1c7305bb37bc9a425258c53e6faab06a45f
+```

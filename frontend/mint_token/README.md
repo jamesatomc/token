@@ -1,3 +1,17 @@
+# Token Minting Platform
+
+A web application for creating and managing custom ERC20 tokens on the Sepolia testnet using a TokenFactory smart contract.
+
+- Contract Address: `0x6FD802f110E6D40a00c69F68BEDD4c5ffCA8C2BB`
+- Network: Sepolia Testnet
+
+## Features
+
+- Create custom ERC20 tokens with configurable parameters
+- Optional fee settings for token transfers
+- Token management dashboard
+- Connect with MetaMask or other Web3 wallets
+
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started

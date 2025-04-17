@@ -5,7 +5,7 @@ import "./Token.sol";
 
 contract TokenFactory {
     // Event to notify when a new token is created
-    event TokenCreated(address tokenAddress, string name, string symbol, uint256 initialSupply, address creator);
+    event TokenCreated(address tokenAddress, string name, string symbol, uint256 initialSupply, address creator, address recipient);
     
     // Array to store all created tokens
     address[] public createdTokens;
@@ -29,21 +29,26 @@ contract TokenFactory {
      * @param symbol The symbol of the token
      * @param initialSupply The initial supply (will be multiplied by 10^18)
      * @param logoURL The URL pointing to the token logo
+     * @param recipient The address to receive the initial token supply (if zero address, tokens stay in factory)
      * @return The address of the newly created token
      */
     function createToken(
         string memory name,
         string memory symbol,
         uint256 initialSupply,
-        string memory logoURL
+        string memory logoURL,
+        address recipient
     ) external returns (address) {
         // Create a new Token contract
         Token newToken = new Token(name, symbol, initialSupply, logoURL);
         
-        // Transfer all initial tokens to the caller
+        // Transfer all initial tokens to the recipient if specified, otherwise keep in factory
         uint256 totalSupply = newToken.balanceOf(address(this));
         require(totalSupply > 0, "No tokens were minted");
-        newToken.transfer(msg.sender, totalSupply);
+        
+        if (recipient != address(0)) {
+            newToken.transfer(recipient, totalSupply);
+        }
         
         // Transfer ownership to the caller
         newToken.transferOwnership(msg.sender);
@@ -61,10 +66,27 @@ contract TokenFactory {
             exists: true
         });
         
-        // Emit the event
-        emit TokenCreated(tokenAddress, name, symbol, initialSupply, msg.sender);
+        // Emit event to notify frontend and blockchain explorers
+        emit TokenCreated(tokenAddress, name, symbol, initialSupply, msg.sender, recipient);
         
         return tokenAddress;
+    }
+    
+    /**
+     * @dev Creates a new token with default recipient (caller)
+     * @param name The name of the token
+     * @param symbol The symbol of the token
+     * @param initialSupply The initial supply (will be multiplied by 10^18)
+     * @param logoURL The URL pointing to the token logo
+     * @return The address of the newly created token
+     */
+    function createTokenWithSelf(
+        string memory name,
+        string memory symbol,
+        uint256 initialSupply,
+        string memory logoURL
+    ) external returns (address) {
+        return this.createToken(name, symbol, initialSupply, logoURL, msg.sender);
     }
     
     /**
@@ -76,10 +98,11 @@ contract TokenFactory {
         uint256 initialSupply,
         string memory logoURL,
         uint256 feePercentage,
-        address feeCollector
+        address feeCollector,
+        address recipient
     ) external returns (address) {
         // Create the basic token first
-        address tokenAddress = this.createToken(name, symbol, initialSupply, logoURL);
+        address tokenAddress = this.createToken(name, symbol, initialSupply, logoURL, recipient);
         Token token = Token(tokenAddress);
         
         // Configure the fee settings
@@ -91,6 +114,20 @@ contract TokenFactory {
         }
         
         return tokenAddress;
+    }
+    
+    /**
+     * @dev Creates a token with pre-configured fee settings and self as recipient
+     */
+    function createTokenWithFeeToSelf(
+        string memory name,
+        string memory symbol,
+        uint256 initialSupply,
+        string memory logoURL,
+        uint256 feePercentage,
+        address feeCollector
+    ) external returns (address) {
+        return this.createTokenWithFee(name, symbol, initialSupply, logoURL, feePercentage, feeCollector, msg.sender);
     }
     
     /**

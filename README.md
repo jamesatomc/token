@@ -70,6 +70,6 @@ forge create src/TokenFactory.sol:TokenFactory  --rpc-url https://tea-sepolia.g.
 [⠊] Compiling...
 No files changed, compilation skipped
 Deployer: 0xC88C539aa6f67daeDaeA7aff75FE1F8848d6CeC2
-Deployed to: 0xEa55E9D1A46E2d25c618163C862A6aa910EDb637
-Transaction hash: 0xe6d5afef4d9114cb8eb9aa07e033f1c7305bb37bc9a425258c53e6faab06a45f
+Deployed to: 0xd6DCfc021E526C483982161f36CE6692fdef9E04
+Transaction hash: 0x40107040f112ae298e15143d338fec36423a9517e1c37bee3d52a24eab32a105
 ```

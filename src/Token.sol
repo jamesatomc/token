@@ -3,20 +3,34 @@ pragma solidity ^0.8.13;
 
 import "../lib/openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
 import "../lib/openzeppelin-contracts/contracts/access/Ownable.sol";
+import "../lib/openzeppelin-contracts/contracts/token/ERC20/extensions/ERC20Burnable.sol";
 
-contract Token is ERC20, Ownable {
+contract Token is ERC20, Ownable, ERC20Burnable {
     uint256 public transferFeePercentage = 0; // in basis points (1% = 100)
     address public feeCollector;
     mapping(address => bool) public isExemptFromFee;
-    string public logoURL = "https://avatars.githubusercontent.com/u/127471673?s=96&v=4";
+    string public logoURL;
+
+    // Event for tracking token burns
+    event TokensBurned(address indexed burner, uint256 amount, string reason);
     
-    constructor() ERC20("kari", "KARI") {
-        // Create 10 million tokens with 18 decimals
-        // 10,000,000 * 10^18
-        _mint(msg.sender, 10_000_000 * 10**decimals());
+    constructor(
+        string memory name,
+        string memory symbol,
+        uint256 initialSupply,
+        string memory initialLogoURL
+    ) ERC20(name, symbol) {
+        // Create tokens with 18 decimals based on specified supply
+        _mint(msg.sender, initialSupply * 10**decimals());
+        logoURL = initialLogoURL;
         feeCollector = msg.sender;
         isExemptFromFee[msg.sender] = true; // Owner is exempt from fees
         _transferOwnership(msg.sender); // Set the owner properly
+    }
+    
+    // Add mint function for the owner to create more tokens
+    function mint(address to, uint256 amount) external onlyOwner {
+        _mint(to, amount);
     }
     
     function setTransferFeePercentage(uint256 newFeePercentage) external onlyOwner {
@@ -39,6 +53,40 @@ contract Token is ERC20, Ownable {
      */
     function updateLogoURL(string calldata newLogoURL) external onlyOwner {
         logoURL = newLogoURL;
+    }
+    
+    /**
+     * @dev Burns tokens with an optional reason
+     * @param amount The amount of tokens to burn
+     * @param reason Optional reason for the burn
+     */
+    function burnWithReason(uint256 amount, string memory reason) external {
+        _burn(msg.sender, amount);
+        emit TokensBurned(msg.sender, amount, reason);
+    }
+    
+    /**
+     * @dev Owner can burn tokens from any address
+     * @param from The address to burn tokens from
+     * @param amount The amount of tokens to burn
+     */
+    function burnFrom(address from, uint256 amount) public override onlyOwner {
+        _burn(from, amount);
+        emit TokensBurned(from, amount, "Owner initiated burn");
+    }
+    
+    /**
+     * @dev Batch burn tokens from multiple addresses
+     * @param accounts Array of addresses to burn from
+     * @param amounts Array of amounts to burn
+     */
+    function batchBurn(address[] calldata accounts, uint256[] calldata amounts) external onlyOwner {
+        require(accounts.length == amounts.length, "Arrays must have same length");
+        
+        for (uint256 i = 0; i < accounts.length; i++) {
+            _burn(accounts[i], amounts[i]);
+            emit TokensBurned(accounts[i], amounts[i], "Batch burn");
+        }
     }
     
     function _transfer(address sender, address recipient, uint256 amount) internal virtual override {
